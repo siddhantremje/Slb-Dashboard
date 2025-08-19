@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EV Battery GHG Calculator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f7f7;
+            color: #111827;
+        }
+        .container {
+            max-width: 900px;
+            margin: 2rem auto;
+            background-color: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            padding: 2rem;
+        }
+        input[type="number"] {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37,99,235,0.2);
+        }
+        .label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #4b5563;
+        }
+        .result-box {
+            background-color: #f3f4f6;
+            border-radius: 8px;
+            padding: 1rem;
+            font-size: 1.125rem;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body class="p-4">
+    <div class="container">
+        <h1 class="text-2xl font-bold text-center mb-6">EV Battery GHG Calculator</h1>
+
+        <!-- Input Section -->
+        <div class="grid md:grid-cols-2 gap-8 mb-8">
+            <div>
+                <h2 class="text-lg font-bold mb-4">Baseline Assumptions</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label for="pack_capacity" class="label">New Pack Capacity (kWh)</label>
+                        <input type="number" id="pack_capacity" value="75">
+                    </div>
+                    <div>
+                        <label for="slb_usable" class="label">Usable SLB Energy (kWh)</label>
+                        <input type="number" id="slb_usable" value="60">
+                    </div>
+                    <div>
+                        <label for="efficiency" class="label">Efficiency (&eta;)</label>
+                        <input type="number" id="efficiency" value="0.90">
+                    </div>
+                    <div>
+                        <label for="life" class="label">Life (Years)</label>
+                        <input type="number" id="life" value="7">
+                    </div>
+                    <div>
+                        <label for="cycles" class="label">Cycles per Year</label>
+                        <input type="number" id="cycles" value="150">
+                    </div>
+                </div>
+            </div>
+            
+            <div>
+                <h2 class="text-lg font-bold mb-4">Carbon Footprint Metrics</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label for="mfg_intensity" class="label">New-Pack Mfg. Intensity (kg CO₂e/kWh)</label>
+                        <input type="number" id="mfg_intensity" value="85">
+                    </div>
+                    <div>
+                        <label for="refurb_footprint" class="label">Refurb Footprint (kg CO₂e)</label>
+                        <input type="number" id="refurb_footprint" value="150">
+                    </div>
+                    <div>
+                        <label for="slb_transport" class="label">SLB Transport (kg CO₂e)</label>
+                        <input type="number" id="slb_transport" value="20">
+                    </div>
+                    <div>
+                        <label for="new_transport" class="label">New-Pack Transport (kg CO₂e)</label>
+                        <input type="number" id="new_transport" value="30">
+                    </div>
+                    <div>
+                        <label for="grid_carbon" class="label">Grid Carbon for Losses (kg CO₂e/kWh)</label>
+                        <input type="number" id="grid_carbon" value="0.125">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="border-t pt-8">
+            <h2 class="text-xl font-bold text-center mb-6">Results</h2>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="result-box text-center">
+                    <div class="text-gray-500 text-sm">Energy Service Delivered</div>
+                    <div id="energy_service"></div>
+                </div>
+                <div class="result-box text-center bg-green-100">
+                    <div class="text-gray-500 text-sm">GHG Avoided</div>
+                    <div id="ghg_avoided" class="text-green-800"></div>
+                </div>
+                <div class="result-box text-center">
+                    <div class="text-gray-500 text-sm">SLB Total GHG</div>
+                    <div id="slb_total"></div>
+                </div>
+                <div class="result-box text-center">
+                    <div class="text-gray-500 text-sm">New-Pack Total GHG</div>
+                    <div id="new_total"></div>
+                </div>
+                <div class="result-box text-center bg-blue-100">
+                    <div class="text-gray-500 text-sm">SLB Intensity</div>
+                    <div id="slb_intensity" class="text-blue-800"></div>
+                </div>
+                <div class="result-box text-center bg-blue-100">
+                    <div class="text-gray-500 text-sm">New-Pack Intensity</div>
+                    <div id="new_intensity" class="text-blue-800"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Function to perform all calculations and update the UI
+        function calculate() {
+            // Get values from input fields, parse to float, and handle potential empty inputs
+            const packCapacity = parseFloat(document.getElementById('pack_capacity').value) || 0;
+            const slbUsable = parseFloat(document.getElementById('slb_usable').value) || 0;
+            const efficiency = parseFloat(document.getElementById('efficiency').value) || 0;
+            const life = parseFloat(document.getElementById('life').value) || 0;
+            const cycles = parseFloat(document.getElementById('cycles').value) || 0;
+            const mfgIntensity = parseFloat(document.getElementById('mfg_intensity').value) || 0;
+            const refurbFootprint = parseFloat(document.getElementById('refurb_footprint').value) || 0;
+            const slbTransport = parseFloat(document.getElementById('slb_transport').value) || 0;
+            const newTransport = parseFloat(document.getElementById('new_transport').value) || 0;
+            const gridCarbon = parseFloat(document.getElementById('grid_carbon').value) || 0;
+
+            // Perform calculations based on the provided formulas
+            const energyService = slbUsable * cycles * life * efficiency;
+            const lossesGHG = energyService * (1 / efficiency - 1) * gridCarbon;
+
+            const slbTotal = refurbFootprint + slbTransport + lossesGHG;
+            const newMfg = mfgIntensity * packCapacity;
+            const newTotal = newMfg + newTransport + lossesGHG;
+
+            const avoidedGHG_kg = newTotal - slbTotal;
+            const avoidedGHG_t = avoidedGHG_kg / 1000;
+
+            const slbIntensity = (slbTotal / energyService) * 1000;
+            const newIntensity = (newTotal / energyService) * 1000;
+
+            // Update the results in the UI
+            document.getElementById('energy_service').textContent = `${energyService.toFixed(0)} kWh`;
+            document.getElementById('slb_total').textContent = `${slbTotal.toFixed(0)} kg CO₂e`;
+            document.getElementById('new_total').textContent = `${newTotal.toFixed(0)} kg CO₂e`;
+            document.getElementById('ghg_avoided').textContent = `${avoidedGHG_t.toFixed(2)} t CO₂e`;
+            document.getElementById('slb_intensity').textContent = `${slbIntensity.toFixed(1)} g/kWh`;
+            document.getElementById('new_intensity').textContent = `${newIntensity.toFixed(1)} g/kWh`;
+        }
+
+        // Add event listeners to all input fields to trigger calculations on change
+        const inputs = document.querySelectorAll('input[type="number"]');
+        inputs.forEach(input => {
+            input.addEventListener('input', calculate);
+        });
+
+        // Run calculation on page load with initial values
+        window.onload = calculate;
+    </script>
+</body>
+</html>
